@@ -1,0 +1,54 @@
+apiVersion: v1
+data:
+  haproxy.cfg: |
+    defaults
+        mode http
+        log global
+        balance roundrobin
+        timeout client 30s
+
+    frontend f1
+        bind *:80
+        default_backend b1
+   
+    backend b1
+        server ngx 127.0.0.1:80
+
+kind: ConfigMap
+metadata:
+  name: hprx-s1-cm
+  namespace: proxy-hub
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: hprx-s1
+  name: hprx-s1
+  namespace: proxy-hub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hprx-s1
+  template:
+    metadata:
+      labels:
+        app: hprx-s1
+    spec:
+      containers:
+      - image: haproxy:2.2.23-alpine
+        name: hprx-s1
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: vol 
+          mountPath: /usr/local/etc/haproxy
+          readOnly: True
+      volumes:
+      - name: vol
+        projected:
+          sources: 
+           - configMap:
+               name: hprx-s1-cm
+---
