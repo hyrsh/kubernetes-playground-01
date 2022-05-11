@@ -12,33 +12,35 @@ data:
         default_backend b1
    
     backend b1
-        server ngx 127.0.0.1:80
+        server ngx1 ngx-s1-svc.sector-1.svc:80
+        server ngx2 ngx-s2-svc.sector-2.svc:80
+        server ngx3 ngx-s3-svc.sector-3.svc:80
 
 kind: ConfigMap
 metadata:
-  name: hprx-s1-cm
+  name: hprx-full-cm
   namespace: proxy-hub
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: hprx-s1
-  name: hprx-s1
+    app: hprx-full
+  name: hprx-full
   namespace: proxy-hub
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hprx-s1
+      app: hprx-full
   template:
     metadata:
       labels:
-        app: hprx-s1
+        app: hprx-full
     spec:
       containers:
       - image: haproxy:2.2.23-alpine
-        name: hprx-s1
+        name: hprx-full
         ports:
         - containerPort: 80
         volumeMounts:
@@ -50,5 +52,26 @@ spec:
         projected:
           sources: 
            - configMap:
-               name: hprx-s1-cm
+               name: hprx-full-cm
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: hprx-full
+  name: hprx-full-svc
+  namespace: proxy-hub
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: hprx-full
+  sessionAffinity: None
+  type: ClusterIP
 ---
