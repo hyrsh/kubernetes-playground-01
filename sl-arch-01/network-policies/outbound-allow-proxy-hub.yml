@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: outbound-allow-dns
+  name: outbound-allow-proxy-hub
 spec:
   podSelector: {}
   policyTypes:
@@ -10,4 +10,4 @@ spec:
     - to:
       - namespaceSelector:
           matchLabels:
-            netpol: dns
+            netpol: proxy-hub

@@ -5,16 +5,18 @@ data:
         mode http
         log global
         balance roundrobin
-        timeout client 30s
+        timeout client 15m
+        timeout server 10s
+        timeout connect 1s
 
     frontend f1
         bind *:80
         default_backend b1
    
     backend b1
-        server ngx1 ngx-s1-svc.sector-1.svc:80
-        server ngx2 ngx-s2-svc.sector-2.svc:80
-        server ngx3 ngx-s3-svc.sector-3.svc:80
+        server ngx-1 ngx-s1-svc.sector-1.svc:80
+        server ngx-2 ngx-s2-svc.sector-2.svc:80
+        server ngx-3 ngx-s3-svc.sector-3.svc:80
 
 kind: ConfigMap
 metadata:

@@ -5,7 +5,9 @@ data:
         mode http
         log global
         balance roundrobin
-        timeout client 30s
+        timeout client 15m
+        timeout server 10s
+        timeout connect 1s
 
     frontend f1
         bind *:80
