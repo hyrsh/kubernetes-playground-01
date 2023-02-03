@@ -1,0 +1,75 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: local-admin
+  namespace: ref
+subjects:
+  - kind: ServiceAccount
+    name: default
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: ref-class
+  namespace: ref
+  annotations:
+    ingressclass.kubernetes.io/is-default-class: "true"
+spec:
+  controller: kubernetes.io/nginx-ref
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ing-controller
+  name: ing-controller
+  namespace: ref
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ing-controller
+  template:
+    metadata:
+      labels:
+        app: ing-controller
+    spec:
+      containers:
+      - image: k8s.gcr.io/ingress-nginx/controller:v1.2.1
+        args:
+          - /nginx-ingress-controller
+          - --ingress-class=ref-class
+          - --controller-class=kubernetes.io/nginx-ref
+          - --enable-ssl-passthrough
+          - --watch-namespace=ref
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        name: controller
+        ports:
+        - name: https
+          containerPort: 443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ing-controller
+  name: ing-ref-svc
+  namespace: ref
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    app: ing-controller

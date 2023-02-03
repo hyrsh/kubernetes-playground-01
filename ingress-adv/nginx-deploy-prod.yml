@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx-prod
+  name: nginx-prod
+  namespace: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-prod
+  template:
+    metadata:
+      labels:
+        app: nginx-prod
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        volumeMounts:
+        - name: page
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: index.html
+      volumes:
+      - name: page
+        configMap:
+          name: nginx-prod-cm
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nginx-prod
+  name: nginx-prod-svc
+  namespace: prod
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: nginx-prod
+---
+apiVersion: v1
+data:
+  index.html: |
+    <h1 align=center>Welcome to CGIs advanced ingress architecture!</h1>
+    <h3 align=center>You are in namespace: prod</h3>
+kind: ConfigMap
+metadata:
+  name: nginx-prod-cm
+  namespace: prod
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-prod-ing
+  namespace: prod
+spec:
+  ingressClassName: prod-class
+  rules:
+  - host: ngx.mno-prod.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: nginx-prod-svc
+            port:
+              number: 80
+        path: /
+        pathType: Prefix

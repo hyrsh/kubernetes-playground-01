@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx-ref
+  name: nginx-ref
+  namespace: ref
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-ref
+  template:
+    metadata:
+      labels:
+        app: nginx-ref
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        volumeMounts:
+        - name: page
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: index.html
+      volumes:
+      - name: page
+        configMap:
+          name: nginx-ref-cm
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nginx-ref
+  name: nginx-ref-svc
+  namespace: ref
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: nginx-ref
+---
+apiVersion: v1
+data:
+  index.html: |
+    <h1 align=center>Welcome to CGIs advanced ingress architecture!</h1>
+    <h3 align=center>You are in namespace: ref</h3>
+kind: ConfigMap
+metadata:
+  name: nginx-ref-cm
+  namespace: ref
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-ref-ing
+  namespace: ref
+spec:
+  ingressClassName: ref-class
+  rules:
+  - host: ngx.mno-ref.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: nginx-ref-svc
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
