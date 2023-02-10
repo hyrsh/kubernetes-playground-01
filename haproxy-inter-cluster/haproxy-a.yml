@@ -1,0 +1,88 @@
+apiVersion: apps/v1                                                                                                                                  [48/2293]kind: Deployment
+metadata:
+  labels:
+    app: haproxy
+  name: haproxy
+  namespace: routing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: haproxy
+  template:
+    metadata:
+      labels:
+        app: haproxy
+    spec:
+      containers:
+      - image: haproxy
+        name: haproxy
+        ports:
+        - containerPort: 8443
+          protocol: TCP
+          hostPort: 8443
+		- containerPort: 8080
+          protocol: TCP
+          hostPort: 8080
+        volumeMounts:
+        - name: cfg
+          mountPath: /usr/local/etc/haproxy/haproxy.cfg
+          subPath: haproxy.cfg
+      hostNetwork: true
+      volumes:
+      - name: cfg
+        configMap:
+          name: haproxy-cm
+---
+apiVersion: v1
+data:
+  haproxy.cfg: |
+    resolvers coredns
+      nameserver n1 10.96.0.10:53
+    defaults
+      mode tcp
+      log global
+      balance roundrobin
+      timeout client 30s
+	  timeout server 30s
+      timeout connect 30s
+    frontend node_http
+      mode http
+      bind *:8080
+      option httplog
+      #the service name here was "svc-cluster-b.routing.svc.cluster.local" pointing to the HAProxy deployment
+      #port was 80, targetPort was 8080 <-- to match the frontend listener
+      #the trick is to use the internal k8s dns query to set the header for filtering with ACLs
+      #all traffic without header to port 8080 will go to backend nginx_404_backend
+	    acl a_acl hdr(host) -m sub -i svc-cluster-b
+      use_backend b_server
+      default_backend nginx_404_backend
+    frontend node_https
+      mode tcp
+      bind *:8443
+      option tcplog
+      #the service name here was "svc-cluster-b.routing.svc.cluster.local" pointing to the HAProxy deployment
+      #port was 443, targetPort was 8443 <-- to match the frontend listener
+      #the trick is to use the internal k8s dns query to set the host handshake for filtering with ACLs
+      #all traffic without SNI request host (SSL handshake information) to port 8443 will go to backend nginx_404_backend_ssl
+      tcp-request inspect-delay 5s
+      tcp-request content accept if { req_ssl_hello_type 1 }
+	    acl a_acl req_ssl_sni -m sub -i svc-cluster-b
+      use_backend b_server_ssl
+      default_backend nginx_404_backend_ssl
+    backend nginx_404_backend
+      mode http
+      server srv nginx-404-svc.default.svc.cluster.local:80 resolvers coredns
+    backend nginx_404_backend_ssl
+      mode tcp
+      server srv nginx-404-svc.default.svc.cluster.local:443 resolvers coredns
+	backend b_srv
+	  mode http
+	  server srv 172.12.22.24:8080
+	backend b_srv_ssl
+	  mode tcp
+	  server srv 172.12.22.24:8443
+kind: ConfigMap
+metadata:
+  name: haproxy-cm
+  namespace: routing
