@@ -50,7 +50,7 @@ data:
       mode http
       bind *:8080
       option httplog
-      #the service name here was "svc-cluster-a.routing.svc.cluster.local"
+      #the service name here was "svc-cluster-a.routing.svc.cluster.local" pointing to the HAProxy deployment
       #port was 80, targetPort was 8080 <-- to match the frontend listener
       #the trick is to use the internal k8s dns query to set the header for filtering with ACLs
       #all traffic without header to port 8080 will go to backend nginx_404_backend
@@ -61,7 +61,7 @@ data:
       mode tcp
       bind *:8443
       option tcplog
-      #the service name here was "svc-cluster-a.routing.svc.cluster.local"
+      #the service name here was "svc-cluster-a.routing.svc.cluster.local" pointing to the HAProxy deployment
       #port was 443, targetPort was 8443 <-- to match the frontend listener
       #the trick is to use the internal k8s dns query to set the host handshake for filtering with ACLs
       #all traffic without SNI request host (SSL handshake information) to port 8443 will go to backend nginx_404_backend_ssl
@@ -76,12 +76,12 @@ data:
     backend nginx_404_backend_ssl
       mode tcp
       server srv nginx-404-svc.default.svc.cluster.local:443 resolvers coredns
-	backend a_srv
-	  mode http
-	  server srv 172.12.22.23:8080
-	backend a_srv_ssl
-	  mode tcp
-	  server srv 172.12.22.23:8443
+	  backend a_srv
+	    mode http
+	    server srv 172.12.22.23:8080
+	  backend a_srv_ssl
+	    mode tcp
+	    server srv 172.12.22.23:8443
 kind: ConfigMap
 metadata:
   name: haproxy-cm

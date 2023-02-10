@@ -76,12 +76,12 @@ data:
     backend nginx_404_backend_ssl
       mode tcp
       server srv nginx-404-svc.default.svc.cluster.local:443 resolvers coredns
-	backend b_srv
-	  mode http
-	  server srv 172.12.22.24:8080
-	backend b_srv_ssl
-	  mode tcp
-	  server srv 172.12.22.24:8443
+	  backend b_srv
+	    mode http
+	    server srv 172.12.22.24:8080
+	  backend b_srv_ssl
+	    mode tcp
+	    server srv 172.12.22.24:8443
 kind: ConfigMap
 metadata:
   name: haproxy-cm
